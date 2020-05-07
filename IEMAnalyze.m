@@ -1,12 +1,5 @@
-%%
-clear;close all; clc;
-%% load data
-addpath utils/;
-load(sprintf('../data/rawdata_probe31.mat'));
-load(sprintf('../data/rawdata_trialinfo_probe31.mat'));
-load(sprintf('../data/accuracy_eeg.mat'))
-load(sprintf('../data/angles.mat'));
-% load data/eegdata.mat
+function IEMAnalyze(state, data, infos_all, angles)
+
 
 %% choose subject
 wrong_sub = [16, 19, 26];
@@ -14,21 +7,19 @@ n_wrong = size(wrong_sub, 2);
 
 idx = ones(31, 1);
 for i = 1:n_wrong
-    idx(i) = 0;
+    idx(wrong_sub(i)) = 0;
 end
 idx = logical(idx);
 
 %%
-hfdata = rawdata_probe31(idx);
-rawdata_trialinfo_probe31 = rawdata_trialinfo_probe31(idx, :);
-acc = acc(idx, :);
-ts1 = ts1(idx, :);
-ts2 = ts2(idx, :);
-
+data = data(idx);
+infos_all = infos_all(idx);
+angles{1} = angles{1}(idx, :);
+angles{2} = angles{2}(idx, :);
 
 %% data data
 n_subject = sum(idx);
-n_tpt = size(hfdata{1},3);
+n_tpt = size(data{1},3);
 
 chan_resp_aligned_all = nan(6, n_tpt, n_subject, 2);
 recons_aligned_all = nan(180, n_tpt, n_subject, 2);
@@ -46,41 +37,33 @@ time_window = 1;
 tpts = 1:n_tpt;
 twindow = [1,n_tpt];
 
-%% trial choose
-probes = [40, 42];
-
-trial_corr_conds = [0,0,1,1];
-trial_probe_conds = [0,1,0,1];
 
 %% train!
-for trial_cc = 1:4
-    correct_only = trial_corr_conds(trial_cc);
-    based_on_probe = trial_probe_conds(trial_cc);
+conditions = [];
+
+while(true)
+    last_conditions = conditions;
     
-    for which_subject = 1:31
+    for which_subject = 1:n_subject
+        %% chose subject data
+        data_all = smoothdata(smoothdata(data{which_subject}, 3), 3);
+        % data_all = rawdata_d{which_subject};
+        label_all = [angles{1}(which_subject,:)',angles{2}(which_subject,:)'];
+        
+        
+        %% choose trials
+        max_trials = size(data_all, 1);
+        
+        [conditions, trial_idx] = selectTrials(last_conditions, infos_all{which_subject}, max_trials, state);
+        if(conditions.status == false)
+            return;
+        end
+        
+        data_all = data_all(trial_idx,:,:);
+        label_all = label_all(trial_idx, :);
         
         for chose_ang = 1:2
             fprintf(datestr(now,'yyyy-mm-dd HH:MM:SS')+"Processing subject: %i, angle: %i--------start\n", which_subject, chose_ang);
-            %% chose subject data
-            data_all = smoothdata(smoothdata(hfdata{which_subject}, 3), 3);
-            % data_all = rawdata_d{which_subject};
-            label_all = [ts1(which_subject,:)',ts2(which_subject,:)'];
-            
-            
-            %% choose trials
-            n_trial = size(data_all, 1);
-            trial_idx = true(n_trial, 1);
-            if(correct_only==1)
-                trial_idx = (acc(which_subject, :)==1 )'& trial_idx;
-            end
-            
-            if(based_on_probe==1)
-                trial_idx = (rawdata_trialinfo_probe31(which_subject, :)==probes(chose_ang))' & trial_idx;
-            end
-            
-            data_all = data_all(trial_idx,:,:);
-            label_all = label_all(trial_idx, :);
-            
             
             %% other params
             labels = label_all(:,chose_ang);
@@ -114,7 +97,7 @@ for trial_cc = 1:4
             X_all = stim_mask * tuning_funcs;
             
             %% Step 2b & 3: Train/test IEM (full delay period) - leave-one-run-out
-            fprintf(datestr(now,'yyyy-mm-dd HH:MM:SS')+"Processing subject: %i, angle: %i--------train IEM\n", which_subject, chose_ang);
+            fprintf(datestr(now,'yyyy-mm-dd HH:MM:SS ')+"Processing subject: %i, angle: %i--------train IEM\n", which_subject, chose_ang);
             
             rng(3728291);% fill this in with estimated channel responses
             
@@ -123,8 +106,8 @@ for trial_cc = 1:4
             for tt = 1:n_tpt
                 % cat more timepoint
                 tpt_idx = abs(tpts-tt)<=time_window;
-                data = reshape(data_all(:,:,tpt_idx),n_trial,(sum(tpt_idx))*n_elec);
-                chan_resp(:,:,tt) = train_IEM(data, X_all, train_epoch, train_group);
+                dt = reshape(data_all(:,:,tpt_idx),n_trial,(sum(tpt_idx))*n_elec);
+                chan_resp(:,:,tt) = train_IEM(dt, X_all, train_epoch, train_group);
             end
             
             fprintf(datestr(now,'yyyy-mm-dd HH:MM:SS')+"Processing subject: %i, angle: %i--------finish train IEM\n", which_subject, chose_ang);
@@ -181,10 +164,10 @@ for trial_cc = 1:4
             recons_aligned_flip(:,ang_stay,:) = recons_aligned_flip(:,ang_stay,:) + flip(recons_aligned_flip(:,ang_flip,:), 2);
             mean_recons_aligned = squeeze(mean(recons_aligned_flip(:,ang_stay,:),1));
             
+            x = (1:90)';
+            X = [ones(length(x),1) x];
             for tt = 1:n_tpt
                 Y = mean_recons_aligned(:,tt);
-                x = (1:90)';
-                X = [ones(length(x),1) x];
                 b = X\Y;
                 slope_all(tt) = b(2);
             end
@@ -221,7 +204,10 @@ for trial_cc = 1:4
     end % which_subject
     
     %% save
-    filename = sprintf("IEMdata_probe_%i_%i",correct_only, based_on_probe);
-    save(filename,'chan_resp_aligned_all','recons_aligned_all', 'all_fidelity_all', 'slope_all_all', 'decode_errs_all');
-    
+    filename = sprintf("data/processed_data/IEMdata_%s_%i", state, conditions.cnt);
+    save(filename,'chan_resp_aligned_all','recons_aligned_all', ...
+        'all_fidelity_all', 'slope_all_all', 'decode_errs_all');
+end
+
+
 end
