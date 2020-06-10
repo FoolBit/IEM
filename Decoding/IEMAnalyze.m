@@ -46,8 +46,8 @@ while(true)
     
     for which_subject = 1:n_subject
         %% chose subject data
-        data_all = smoothdata(smoothdata(data{which_subject}, 3), 3);
-        % data_all = rawdata_d{which_subject};
+        % data_all = smoothdata(smoothdata(data{which_subject}, 3), 3);
+        data_all = data{which_subject};
         label_all = [angles{1}(which_subject,:)',angles{2}(which_subject,:)'];
         
         
@@ -204,7 +204,7 @@ while(true)
     end % which_subject
     
     %% save
-    filename = sprintf("data/processed_data/IEMdata_%s_%i", state, conditions.cnt);
+    filename = sprintf("data/processed_data/IEMdata_nosmooth_%s_%i", state, conditions.cnt);
     save(filename,'chan_resp_aligned_all','recons_aligned_all', ...
         'all_fidelity_all', 'slope_all_all', 'decode_errs_all');
 end

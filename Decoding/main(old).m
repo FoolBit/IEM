@@ -1,16 +1,16 @@
 
 clear;close all; clc;
 %% load data
-addpath utils/;
-load(sprintf('./data/hfdata_encode_all31'));
-load(sprintf('./data/angles.mat'));
+addpath ../utils/;
+load(sprintf('../data/encode_data.mat'));
+load(sprintf('../data/angles.mat'));
 % load data/eegdata.mat
 
 %% chose one subject
 which_subject = 1;
-data_all = smoothdata(smoothdata(hfdata{which_subject}, 3), 3);
+data_all = smoothdata(smoothdata(encode_data{which_subject}, 3), 3);
 % data_all = rawdata_d{which_subject};
-label_all = [ts1(which_subject,:)',ts2(which_subject,:)'];
+label_all = [angles{1}(which_subject,:)',angles{2}(which_subject,:)'];
 
 %% params
 sampling_rate = 1/.01;
@@ -95,8 +95,8 @@ end
 
 %% Step 1: Build spatial IEM (same as in fundamentals tutorial!)
 
-n_chan = 6; % # of channels, evenly spaced around the screen
-% chan_centers = linspace(180/n_chan,180,n_chan);
+n_chan = 1; % # of channels, evenly spaced around the screen
+chan_centers = linspace(180/n_chan,180,n_chan);
 chan_centers = conds;
 
 chan_width = 90;
@@ -108,8 +108,8 @@ tuning_funcs = build_basis_polar_mat(angs,chan_centers,chan_width);
 
 if DEBUG == 1
     % now let's look at the basis set:
-    figure; plot(angs,tuning_funcs,'LineWidth',1.5);
-    xlabel('Angle (\circ)');ylabel('Channel sensitivity'); title('Basis set (information channels)');
+    figure; plot(tuning_funcs,'LineWidth',1.5);
+    %xlabel('Angle (\circ)');ylabel('Channel sensitivity'); title('Tuning Functions (information channels)');
     xlim([0 180]);set(gca,'XTick',0:45:180,'TickDir','out','Box','off','FontSize',14);
     
     legend('10','40','70','100','130','160','Box','off');

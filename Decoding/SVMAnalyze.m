@@ -57,7 +57,7 @@ while(true)
         % acc_CV_KNN = nan(n_tpt, 2);
         % acc_pred_SVM = nan(size(data_all,3));
         % acc_pred_KNN = nan(size(data_all,3));
-        acc_pred_SVM = nan(n_tpt, 2);
+        % acc_pred_SVM = nan(n_tpt, 2);
         % acc_pred_KNN = nan(n_tpt, 2);
         % X_test = reshape(permute(data_all,[1 3 2]),n_trial*n_tpt,size(data_all,2));
         % Y = label_all(:,choose_ang);
@@ -79,12 +79,12 @@ while(true)
                 % [KNN, acc_CV_KNN(tpt, choose_ang)] = trainSVMClassifier(data_train);
                 
                 % predict
-                fprintf(datestr(now)+"    Subject: %i, Timepoint: %i, angle: %i--------predicting using SVM\n",which_subject, tpt, choose_ang);
+                % fprintf(datestr(now)+"    Subject: %i, Timepoint: %i, angle: %i--------predicting using SVM\n",which_subject, tpt, choose_ang);
                 %         y_pred_SVM = SVM.predictFcn(X_test);
                 %         y_pred_SVM = reshape(y_pred_SVM, n_trial, n_tpt);
                 %         acc_pred_SVM(tpt, :) = sum(y_pred_SVM==Y, 1)/n_trial;
-                y_pred_SVM = SVM.predictFcn(X_train);
-                acc_pred_SVM(tpt, choose_ang) = sum(y_pred_SVM==Y, 1)/n_trial;
+                % y_pred_SVM = SVM.predictFcn(X_train);
+                % acc_pred_SVM(tpt, choose_ang) = sum(y_pred_SVM==Y, 1)/n_trial;
                 
                 % fprintf(datestr(now)+"    Subject: %i, Timepoint: %i, angle: %i--------predicting using KNN\n",ss, tpt, choose_ang);
                 %         y_pred_KNN = KNN.predictFcn(X_test);
@@ -99,13 +99,13 @@ while(true)
         
         acc_CV_SVM_all(:, :, which_subject) = acc_CV_SVM;
         % acc_CV_KNN_all(:, :, ss) = acc_CV_KNN;
-        acc_pred_SVM_all(:, :, which_subject) = acc_pred_SVM;
+        % acc_pred_SVM_all(:, :, which_subject) = acc_pred_SVM;
         % acc_pred_KNN_all(:, :, ss) = acc_pred_KNN;
         fprintf(datestr(now)+"        finish process subject: %i !\n",ss);
     end
     %%
-    filename = sprintf("data/processed_data/SVMdata_%s_%i", state, conditions.cnt);
-    save(filename, 'acc_CV_SVM_all', 'acc_pred_SVM_all');
+    filename = sprintf("../data/processed_data/SVMdatanew_%s_%i", state, conditions.cnt);
+    save(filename, 'acc_CV_SVM_all');
 end
 
 end

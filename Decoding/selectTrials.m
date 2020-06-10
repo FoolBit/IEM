@@ -6,9 +6,9 @@ cue_info = infos.cue_info;
 
 % -------------------------------- set conditions
 % conditions
-corrs = cell({0, 1});
+corrs = cell({1});
 probes = cell({0, 40, 42});
-cues = cell({0, 50, 52, 54, 56,[50, 54], [52, 56], [50,52], [54,56]});
+cues = cell({0, 50, 52, 54, 56,[50, 54], [52, 56]});
 
 % num of conditions for each phase
 n_corr = length(corrs);
@@ -20,7 +20,7 @@ n_cues = length(cues);
 if(isempty(conditions))
    conditions = struct;
    conditions.status = true;
-   conditions.cnt = 0;
+   conditions.cnt = 5;
 end
 
 conditions.cnt = conditions.cnt+1;
