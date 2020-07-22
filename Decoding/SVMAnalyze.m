@@ -2,6 +2,7 @@ function SVMAnalyze(state, data, infos_all, angles)
 
 
 %% choose subject
+% 踢掉有问题的被试
 wrong_sub = [16, 19, 26];
 n_wrong = size(wrong_sub, 2);
 
@@ -18,8 +19,8 @@ angles{1} = angles{1}(idx, :);
 angles{2} = angles{2}(idx, :);
 
 %% params
-n_subject = sum(idx);
-n_tpt = size(data{1},3);
+n_subject = sum(idx); % 被试数量
+n_tpt = size(data{1},3); % 时间点
 
 plot_gate = 0;
 acc_CV_SVM_all = nan(n_tpt, 2, n_subject);
@@ -31,16 +32,18 @@ acc_pred_SVM_all = nan(n_tpt, 2, n_subject);
 conditions = [];
 
 while(true)
+    % 同样用来给trial分组
     last_conditions = conditions;
     %% loop for subjects
     for which_subject = 1:n_subject
+        % 选取一个被试的数据
         fprintf(datestr(now)+"        start process subject: %i\n",which_subject);
         data_all = smoothdata(smoothdata(data{which_subject}, 3), 3);
         label_all = [angles{1}(which_subject,:)',angles{2}(which_subject,:)'];
         
         %% choose trials
         max_trials = size(data_all, 1);
-        
+        % 给trial分组
         [conditions, trial_idx] = selectTrials(last_conditions, infos_all{which_subject}, max_trials, state);
         if(conditions.status == false)
             return;
@@ -63,6 +66,7 @@ while(true)
         % Y = label_all(:,choose_ang);
         
         %% train model
+        % 分别以两个刺激为标签，对每个时间点分别进行trian
         for choose_ang = 1:2
             Y = label_all(:,choose_ang);
             for tpt = 1:n_tpt
@@ -70,7 +74,7 @@ while(true)
                 
                 % retrive train data
                 X_train = squeeze(data_all(:,:,tpt));
-                data_train = [X_train, Y];
+                data_train = [X_train, Y]; % 格式：[数据， 标签]
                 
                 % train
                 fprintf(datestr(now)+"    Subject: %i, Timepoint: %i, angle: %i--------training SVM\n",which_subject, tpt, choose_ang);

@@ -1,7 +1,11 @@
 function IEMAnalyze(state, data, infos_all, angles)
-
+% state: 处在哪个阶段的数据
+% data： 神经活动的数据
+% infos_all: 
+% angles：两个刺激的角度
 
 %% choose subject
+% 这几个被试的数据有问题，踢掉
 wrong_sub = [16, 19, 26];
 n_wrong = size(wrong_sub, 2);
 
@@ -12,19 +16,20 @@ end
 idx = logical(idx);
 
 %%
+% 把错误数据的被试都踢掉
 data = data(idx);
 infos_all = infos_all(idx);
 angles{1} = angles{1}(idx, :);
 angles{2} = angles{2}(idx, :);
 
 %% data data
-n_subject = sum(idx);
-n_tpt = size(data{1},3);
+n_subject = sum(idx); % 一共多少个有效被试
+n_tpt = size(data{1},3); % 有多少个时间点
 
-chan_resp_aligned_all = nan(6, n_tpt, n_subject, 2);
-recons_aligned_all = nan(180, n_tpt, n_subject, 2);
+chan_resp_aligned_all = nan(6, n_tpt, n_subject, 2); % 对其后的相应
+recons_aligned_all = nan(180, n_tpt, n_subject, 2); % 对其后的重构刺激
 all_fidelity_all = nan(n_tpt, n_subject, 2);
-slope_all_all = nan(n_tpt, n_subject, 2);
+slope_all_all = nan(n_tpt, n_subject, 2); % 斜率
 decode_errs_all = nan(n_tpt, n_subject, 2);
 
 
@@ -47,13 +52,15 @@ while(true)
     for which_subject = 1:n_subject
         %% chose subject data
         % data_all = smoothdata(smoothdata(data{which_subject}, 3), 3);
+        % 选取一个被时的数据
         data_all = data{which_subject};
         label_all = [angles{1}(which_subject,:)',angles{2}(which_subject,:)'];
         
         
         %% choose trials
-        max_trials = size(data_all, 1);
+        max_trials = size(data_all, 1); % 有多少个trial
         
+        % selectTrials用来对trial分组，按照不同的实验条件分成若干组
         [conditions, trial_idx] = selectTrials(last_conditions, infos_all{which_subject}, max_trials, state);
         if(conditions.status == false)
             return;
@@ -62,6 +69,7 @@ while(true)
         data_all = data_all(trial_idx,:,:);
         label_all = label_all(trial_idx, :);
         
+        % 分别以两个不同的角度为标签来训练IEM
         for chose_ang = 1:2
             fprintf(datestr(now,'yyyy-mm-dd HH:MM:SS')+"Processing subject: %i, angle: %i--------start\n", which_subject, chose_ang);
             
@@ -85,6 +93,7 @@ while(true)
             % evaluate basis set at these
             angs = linspace(1,180,180)';
             
+            % 生成6个基础的通道
             tuning_funcs = build_basis_polar_mat(angs,chan_centers,chan_width);
             
             %% Step 2a: Use basis set to compute channel responses
@@ -94,6 +103,7 @@ while(true)
                 stim_mask(tt,angs==labels(tt)) = 1;
             end
             
+            % 计算理论响应
             X_all = stim_mask * tuning_funcs;
             
             %% Step 2b & 3: Train/test IEM (full delay period) - leave-one-run-out
@@ -103,6 +113,7 @@ while(true)
             
             chan_resp = nan(n_trial, n_chan, n_tpt);
             
+            % 训练IEM，得到权重W
             for tt = 1:n_tpt
                 % cat more timepoint
                 tpt_idx = abs(tpts-tt)<=time_window;
@@ -112,6 +123,7 @@ while(true)
             
             fprintf(datestr(now,'yyyy-mm-dd HH:MM:SS')+"Processing subject: %i, angle: %i--------finish train IEM\n", which_subject, chose_ang);
             %% Align them
+            % 进行中心对其
             targ_pos = 90;
             [~,targ_idx] = min(abs(chan_centers-targ_pos));
             rel_chan_centers = chan_centers - targ_pos; % x values for plotting - relative channel position compared to aligned
@@ -130,6 +142,7 @@ while(true)
             
             
             %% Convert channel responses to 'reconstructions'
+            % 刺激重构，投射到0-180的空间
             recons_raw = nan(n_trial, size(angs,1), n_tpt);
             for tt = 1:n_tpt
                 recons_raw(:,:,tt) = chan_resp(:,:,tt) * tuning_funcs.';
@@ -143,7 +156,8 @@ while(true)
                 recons_aligned(tt,:,:) = circshift(recons_raw(tt,:,:),targ_pos-shift_by);
             end
             
-            %% 'fidelity'
+            %% 'fidelity' 
+            % 废弃
             compute_fidelity = @(rec) mean( rec .* cosd(angs') ,2);
             % compute_fidelity = @(rec) mean( bsxfun(@times,rec,sind(angs')) ,2);
             
@@ -158,6 +172,7 @@ while(true)
             slope_all = nan(n_tpt, 1);
             
             % flip
+            % 把曲线右半部分翻转过来，然后用最小二乘计算斜率
             ang_stay = angs>=1 & angs <= 90;
             ang_flip = angs>=91 & angs <= 180;
             recons_aligned_flip = recons_aligned;

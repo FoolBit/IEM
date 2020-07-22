@@ -1,4 +1,5 @@
 function [conditions, trial_idx] = selectTrials(conditions, infos, max_trials, state)
+% 按照不同实验条件，每次选取一组条件来分析
 
 acc_info = infos.acc_info;
 probe_info = infos.probe_info;

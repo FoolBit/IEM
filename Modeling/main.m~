@@ -16,18 +16,18 @@ acc_syn_cue = nan(n_tpt, 2, 2);
 %% trial select
 idx = true(1,n_trial); 
 
-% cue_idx是两行，第一行记录哪些trial是cue1，第二行记录哪些trail是cue2
+% 
 cue1_idx = (cue == 0) & idx; 
 cue2_idx = (cue == 1) & idx;
 cue_idx = [cue1_idx;cue2_idx];
 
 clear idx cue1_idx cue2_idx
 %% train
-for t = 1:n_tpt % 每个时间点计算一次
-    for c = 1:2 % 分别训练cue1和cue2的trial
+for t = 1:n_tpt
+    for c = 1:2
         idx = cue_idx(c,:);
         fprintf('Processing timepoint: %i\n',t);
-        trainingData = [squeeze(h(t,idx,:)), double(stim1(idx)')]; % 训练数据的格式：[细胞状态， 呈现的刺激]， 下同
+        trainingData = [squeeze(h(t,idx,:)), double(stim1(idx)')];
         [~, acc_neuron_cue(t, 1, c)] = trainLinearSVM(trainingData);
         
         trainingData = [squeeze(h(t,idx,:)), double(stim2(idx)')];
